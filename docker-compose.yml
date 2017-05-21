@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  node:
+    image: docker:stable-dind
+    command: /usr/local/bin/dockerd
+    privileged: true
+    working_dir: /data
+    volumes:
+      - ./:/data
+
+  registry:
+    image: registry
+    ports:
+      - 5000:5000
