@@ -1,3 +1,3 @@
 [submodule "du-group-supervisor"]
 	path = du-group-supervisor
-	url = git@github.com:NightWolf007/du-group-supervisor.git
+	url = https://github.com/NightWolf007/du-group-supervisor.git
