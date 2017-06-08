@@ -21,11 +21,6 @@ while getopts "b:g:h" option; do
 done
 shift $((OPTIND - 1))
 
-if [ -z "$bind_addr" ]; then
-  echo "-b options requied"
-  exit 1
-fi
-
 function create_group {
   join=$1
   docker swarm init --advertise-addr $bind_addr
@@ -68,9 +63,17 @@ function leave {
 
 case "$1" in
   start)
+    if [ -z "$bind_addr" ]; then
+      echo "-b options requied"
+      exit 1
+    fi
     start
     ;;
   join)
+    if [ -z "$bind_addr" ]; then
+      echo "-b options requied"
+      exit 1
+    fi
     join $2
     ;;
   leave)
