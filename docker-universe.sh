@@ -1,12 +1,35 @@
 #!/bin/bash
 
-GSUP_IMAGE="192.168.33.1:5000/group-supervisor"
+function print_usage {
+  echo "Usage: docker-universe.sh [OPTIONS] COMMAND"
+  echo "Options:"
+  echo "  -b BIND_ADDR - Bind address. Required"
+  echo "  -g GSUP_IMAGE - URL to group supervisor image in Docker registry"
+  echo "  -h - Prints this help"
+  echo "Commands:"
+  echo "  start - Starts new universe from current node"
+  echo "  join HOST - Joins current node to universe though HOST"
+}
+
+gsup_image="localhost:5000/group-supervisor"
+while getopts "b:g:h" option; do
+  case "$option" in
+    g) gsup_image=$OPTARG;;
+    b) bind_addr=$OPTARG;;
+    h) print_usage; exit;;
+  esac
+done
+shift $((OPTIND - 1))
+
+if [ -z "$bind_addr" ]; then
+  echo "-b options requied"
+  exit 1
+fi
 
 function create_group {
   join=$1
-  selfip=$(hostname -I | tr " " "\n" | grep 192.168.33 | head -n 1)
-  docker swarm init --advertise-addr $selfip
-  docker pull $GSUP_IMAGE
+  docker swarm init --advertise-addr $bind_addr
+  docker pull $gsup_image
   docker network create --driver overlay groupnet
   docker service create --network groupnet --name group_storage redis
   join_env=$([ "$join" != "" ] && echo "--env JOIN=$join" || echo "")
@@ -14,9 +37,9 @@ function create_group {
                         --publish 10000:10000 \
                         --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
                         --env STORAGE_URL="redis://group_storage:6379/0" \
-                        --env HOSTNAME=$selfip \
+                        --env HOSTNAME=$bind_addr \
                         $join_env \
-                        --name group_supervisor $GSUP_IMAGE
+                        --name group_supervisor $gsup_image
 }
 
 function start {
@@ -41,13 +64,6 @@ function join {
 
 function leave {
   docker swarm leave -f
-}
-
-function print_usage {
-  echo "Usage: docker-universe.sh COMMAND"
-  echo "Commands:"
-  echo "  start - Starts new universe from current node"
-  echo "  join HOST - Joins current node to universe though HOST"
 }
 
 case "$1" in
