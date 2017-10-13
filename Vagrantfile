@@ -4,12 +4,12 @@
 Vagrant.configure('2') do |config|
   config.vm.box = 'centos/7'
 
-  # config.vm.network "forwarded_port", guest: 3000, host: 3000
+  #config.vm.network 'forwarded_port', guest: 3000, host: 3000
+  config.vm.network 'forwarded_port', guest: 22, host: 2222, disabled: true
 
   config.vm.synced_folder '.', '/vagrant'
 
   config.vbguest.auto_update = true
-  # config.vbguest.installer_arguments = %w[--nox11]
   config.vm.provider 'virtualbox' do |vb|
     vb.gui = false
     vb.cpus = 1
@@ -43,9 +43,11 @@ Vagrant.configure('2') do |config|
 
   config.vm.define 'node1' do |node1|
     node1.vm.network 'private_network', ip: '192.168.35.11'
+    config.vm.network 'forwarded_port', guest: 22, host: 2135, id: 'ssh'
   end
 
   config.vm.define 'node2' do |node2|
     node2.vm.network 'private_network', ip: '192.168.35.12'
+    config.vm.network 'forwarded_port', guest: 22, host: 2235, id: 'ssh'
   end
 end
