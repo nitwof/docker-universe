@@ -7,7 +7,7 @@ Vagrant.configure('2') do |config|
   #config.vm.network 'forwarded_port', guest: 3000, host: 3000
   config.vm.network 'forwarded_port', guest: 22, host: 2222, disabled: true
 
-  config.vm.synced_folder '.', '/vagrant'
+  config.vm.synced_folder '.', '/vagrant', type: 'rsync'
 
   config.vbguest.auto_update = true
   config.vm.provider 'virtualbox' do |vb|
@@ -44,10 +44,18 @@ Vagrant.configure('2') do |config|
   config.vm.define 'node1' do |node1|
     node1.vm.network 'private_network', ip: '192.168.35.11'
     config.vm.network 'forwarded_port', guest: 22, host: 2135, id: 'ssh'
+
+    config.vm.provision 'shell', inline: <<-SHELL
+      ssh-keygen -t rsa -b 4096 -C "node1"
+    SHELL
   end
 
   config.vm.define 'node2' do |node2|
     node2.vm.network 'private_network', ip: '192.168.35.12'
     config.vm.network 'forwarded_port', guest: 22, host: 2235, id: 'ssh'
+
+    config.vm.provision 'shell', inline: <<-SHELL
+      ssh-keygen -t rsa -b 4096 -C "node2"
+    SHELL
   end
 end
