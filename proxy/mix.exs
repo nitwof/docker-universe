@@ -29,8 +29,9 @@ defmodule Proxy.Mixfile do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:socket, "~> 0.3"},
       {:kafka_ex, "~> 0.8"},
+      {:observer_cli, "~> 1.1.0"},
+      {:wobserver, "~> 0.1", only: :dev},
       {:ex_doc, "~> 0.18", only: :dev, runtime: false},
       {:credo, "~> 0.8", only: [:dev, :test]},
       {:espec, "~> 1.4", only: :test},

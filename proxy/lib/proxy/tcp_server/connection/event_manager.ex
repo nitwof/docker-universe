@@ -1,9 +1,9 @@
-defmodule Proxy.TCPServer.EventManager do
-  @timeout 10_000
+defmodule Proxy.TCPServer.Connection.EventManager do
+  @timeout 5_000
 
-  def start_link() do
-    import Supervisor.Spec
-    Supervisor.start_link([], strategy: :simple_one_for_one)
+  def start_link do
+    child = %{id: GenServer, start: {GenServer, :start_link, []}}
+    Supervisor.start_link([child], strategy: :simple_one_for_one)
   end
 
   def stop(sup) do
@@ -13,12 +13,12 @@ defmodule Proxy.TCPServer.EventManager do
     Supervisor.stop(sup)
   end
 
-  def add_handler(sup, handler, opts) do
-    sup |> Supervisor.start_child([handler, opts])
+  def add_handler(sup, handler) do
+    Supervisor.start_child(sup, handler)
   end
 
   def message(sup, msg) do
-    sup |> notify({:message, msg})
+    notify(sup, {:message, msg})
   end
 
   defp notify(sup, msg) do
