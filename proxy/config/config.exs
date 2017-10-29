@@ -2,6 +2,14 @@
 # and its dependencies with the aid of the Mix.Config module.
 use Mix.Config
 
+config :logger,
+  backends: [:console],
+  compile_time_application: true,
+  compile_time_purge_level: :debug
+
+config :logger, :console,
+  metadata: [:module, :function]
+
 kafka_host = System.get_env("KAFKA_HOST") || "0.0.0.0"
 config :kafka_ex,
   brokers: [

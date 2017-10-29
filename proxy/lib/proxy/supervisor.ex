@@ -1,17 +1,20 @@
 defmodule Proxy.Supervisor do
   use Supervisor
 
-  alias Proxy.TCPServer
-  alias Proxy.Producer.TCPMessagesHandler
+  alias Proxy.ConnectionPool
+  alias Proxy.Acceptor
 
   def start_link(opts) do
     Supervisor.start_link(__MODULE__, :ok, opts)
   end
 
   def init(:ok) do
-    event_handlers = [[TCPMessagesHandler, []]]
     children = [
-      {TCPServer.Supervisor, [event_handlers]}
+      {ConnectionPool, name: ConnectionPool},
+      Supervisor.child_spec(Acceptor,
+        start: {Acceptor, :start_link, [8080, ConnectionPool]},
+        restart: :permanent
+      )
     ]
 
     Supervisor.init(children, strategy: :one_for_one, name: Proxy.Supervisor)
