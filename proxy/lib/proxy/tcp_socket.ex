@@ -1,5 +1,6 @@
 defmodule Proxy.TCPSocket do
   @moduledoc """
+  Wrapper for gen_tcp module.
   Provides functions for managing gen_tcp sockets.
   """
 

@@ -1,4 +1,8 @@
 defmodule Proxy.Connection.Consumer do
+  @moduledoc """
+  GenServer that listens Kafka.
+  Sends all received messages to connection (tcp socket).
+  """
   use KafkaEx.GenConsumer
 
   alias Proxy.Connection
@@ -7,6 +11,13 @@ defmodule Proxy.Connection.Consumer do
 
   require Logger
 
+  # Client
+
+  @doc """
+  Starts consumer and sets connection
+  """
+  @spec start_link(Connection.t, String.t,
+                   non_neg_integer, non_neg_integer) :: {:ok, pid} | {:error, any}
   def start_link(conn, group_name, topic, partition, opts \\ []) do
     with {:ok, pid} <- GenConsumer.start_link(__MODULE__, group_name,
                                               topic, partition, opts)
@@ -16,6 +27,16 @@ defmodule Proxy.Connection.Consumer do
     end
   end
 
+  @doc """
+  Sets connection in GenServer's state
+  """
+  @spec set_connection(pid, Connection.t) :: :ok
+  def set_connection(pid, conn) do
+    GenConsumer.call(pid, {:set_connection, conn})
+  end
+
+  # Server
+
   def init(topic, partition) do
     state = %{
       topic: topic,
@@ -23,10 +44,6 @@ defmodule Proxy.Connection.Consumer do
       conn: nil
     }
     {:ok, state}
-  end
-
-  def set_connection(pid, conn) do
-    GenConsumer.call(pid, {:set_connection, conn})
   end
 
   def handle_message_set(messages, %{conn: conn, topic: topic,

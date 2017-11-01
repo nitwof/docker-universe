@@ -1,4 +1,8 @@
 defmodule Proxy.CompositeConnection do
+  @moduledoc """
+  Container for two connections.
+  Shutdowns on one of the connections exit.
+  """
   use GenServer
 
   alias Proxy.Connection
@@ -6,6 +10,11 @@ defmodule Proxy.CompositeConnection do
   @cli_group_name "proxy_cli_consumer"
   @app_group_name "proxy_app_consumer"
 
+  @doc """
+  Starts CompositeConnection
+  """
+  @spec start_link(:gen_tcp.socket, :gen_tcp.socket,
+                   String.t, non_neg_integer) :: {:ok, pid} | {:error, any}
   def start_link(cli_socket, app_socket, topic, partition) do
     GenServer.start_link(__MODULE__,
       {cli_socket, app_socket, topic, partition},
