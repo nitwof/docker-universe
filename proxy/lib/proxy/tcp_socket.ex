@@ -73,7 +73,7 @@ defmodule Proxy.TCPSocket do
 
   Returns data or error.
   """
-  @spec read(:gen_tcp.socket) :: {:ok, String.t} | {:error, :closed | :inet.posix} 
+  @spec read(:gen_tcp.socket) :: {:ok, String.t} | {:error, :closed | :inet.posix}
   def read(socket) do
     :gen_tcp.recv(socket, 0)
   end
@@ -81,7 +81,7 @@ defmodule Proxy.TCPSocket do
   @doc """
   Sends data on a socket.
   """
-  @spec write(:gen_tcp.socket, String.t) :: :ok | {:error, :closed | :inet.posix} 
+  @spec write(:gen_tcp.socket, String.t) :: :ok | {:error, :closed | :inet.posix}
   def write(socket, data) do
     :gen_tcp.send(socket, data)
   end

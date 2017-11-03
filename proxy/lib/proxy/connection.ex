@@ -55,7 +55,9 @@ defmodule Proxy.Connection do
   end
 
   def handle_call({:send_message, msg}, _from, %{socket: socket} = state) do
-    Logger.debug("Sending message '#{inspect(msg)}' to tcp socket")
+    Logger.debug fn ->
+      "Sending message '#{inspect(msg)}' to tcp socket"
+    end
     :gen_tcp.send(socket, msg)
     {:reply, :ok, state}
   end

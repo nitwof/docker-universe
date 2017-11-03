@@ -1,4 +1,8 @@
 defmodule Proxy.Supervisor do
+  @moduledoc """
+  Main supervisor
+  """
+
   use Supervisor
 
   alias Proxy.ConnectionPool

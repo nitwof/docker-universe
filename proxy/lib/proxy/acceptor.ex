@@ -23,25 +23,30 @@ defmodule Proxy.Acceptor do
   @spec run(non_neg_integer, pid) :: any
   def run(port, connection_pool) do
     {:ok, socket} = TCPSocket.listen(port)
-    Logger.info("Accepting connections on port #{port}")
+    Logger.info fn ->
+      "Accepting connections on port #{port}"
+    end
 
     loop_acceptor(socket, connection_pool)
   end
 
-  @doc """
-  Accepts connections with tail recursion
-  """
+  # Accepts connections with tail recursion
   @spec loop_acceptor(:gen_tcp.socket, pid) :: any
   defp loop_acceptor(socket, connection_pool) do
     {:ok, client} = TCPSocket.accept(socket)
 
-    Logger.debug("Accepted connection")
+    Logger.debug fn ->
+      "Accepted connection"
+    end
+
     with {:ok, pid} <- ConnectionPool.create_connection(connection_pool, client)
     do
       :ok = TCPSocket.controlling_process(client, pid)
     else
       _ ->
-        Logger.debug("Failed to create connection in ConnectionPool")
+        Logger.debug fn ->
+          "Failed to create connection in ConnectionPool"
+        end
         TCPSocket.close(client)
     end
 

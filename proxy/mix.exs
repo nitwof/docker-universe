@@ -30,10 +30,10 @@ defmodule Proxy.Mixfile do
   defp deps do
     [
       {:kafka_ex, "~> 0.8"},
-      {:observer_cli, "~> 1.1.0"},
       {:wobserver, "~> 0.1", only: :dev},
       {:ex_doc, "~> 0.18", only: :dev, runtime: false},
-      {:credo, "~> 0.8", only: [:dev, :test]},
+      {:dialyxir, "~> 0.5", only: :dev, runtime: false},
+      {:credo, "~> 0.8", only: [:dev, :test], runtime: false},
       {:espec, "~> 1.4", only: :test},
       {:excoveralls, "~> 0.7", only: :test}
     ]

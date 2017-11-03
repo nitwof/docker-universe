@@ -16,8 +16,8 @@ defmodule Proxy.Connection.Consumer do
   @doc """
   Starts consumer and sets connection
   """
-  @spec start_link(Connection.t, String.t,
-                   non_neg_integer, non_neg_integer) :: {:ok, pid} | {:error, any}
+  @spec start_link(pid, String.t, String.t, non_neg_integer) ::
+        {:ok, pid} | {:error, any}
   def start_link(conn, group_name, topic, partition, opts \\ []) do
     with {:ok, pid} <- GenConsumer.start_link(__MODULE__, group_name,
                                               topic, partition, opts)
@@ -30,7 +30,7 @@ defmodule Proxy.Connection.Consumer do
   @doc """
   Sets connection in GenServer's state
   """
-  @spec set_connection(pid, Connection.t) :: :ok
+  @spec set_connection(pid, pid) :: :ok
   def set_connection(pid, conn) do
     GenConsumer.call(pid, {:set_connection, conn})
   end
@@ -49,8 +49,10 @@ defmodule Proxy.Connection.Consumer do
   def handle_message_set(messages, %{conn: conn, topic: topic,
                                      partition: partition} = state) do
     Enum.each(messages,
-      fn msg -> 
-        Logger.debug("Received message '#{inspect(msg)}' from Kafka #{topic}:#{partition}")
+      fn msg ->
+        Logger.debug fn ->
+          "Received message '#{inspect(msg)}' from Kafka #{topic}:#{partition}"
+        end
       end
     )
 
