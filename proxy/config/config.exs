@@ -2,6 +2,9 @@
 # and its dependencies with the aid of the Mix.Config module.
 use Mix.Config
 
+config :proxy,
+  zk_hosts: [{"0.0.0.0", 2181}]
+
 config :logger,
   backends: [:console],
   compile_time_application: true,

@@ -30,6 +30,7 @@ defmodule Proxy.Mixfile do
   defp deps do
     [
       {:kafka_ex, "~> 0.8"},
+      {:erlzk, "~> 0.6"},
       {:wobserver, "~> 0.1", only: :dev},
       {:ex_doc, "~> 0.18", only: :dev, runtime: false},
       {:dialyxir, "~> 0.5", only: :dev, runtime: false},

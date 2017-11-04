@@ -16,7 +16,7 @@ defmodule Proxy.Connection.Consumer do
   @doc """
   Starts consumer and sets connection
   """
-  @spec start_link(pid, String.t, String.t, non_neg_integer) ::
+  @spec start_link(GenServer.server, String.t, String.t, non_neg_integer) ::
         {:ok, pid} | {:error, any}
   def start_link(conn, group_name, topic, partition, opts \\ []) do
     with {:ok, pid} <- GenConsumer.start_link(__MODULE__, group_name,
@@ -57,6 +57,7 @@ defmodule Proxy.Connection.Consumer do
     )
 
     messages
+    |> Enum.filter(fn %Message{value: data} -> !is_nil(data) end)
     |> Enum.each(fn %Message{value: data} -> Connection.send_message(conn, data) end)
 
     {:async_commit, state}

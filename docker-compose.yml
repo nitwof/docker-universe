@@ -6,7 +6,7 @@ services:
     ports:
       - 5000:5000
     volumes:
-      - ./volumes/registry:/var/lib/registry
+      - ./.data/registry:/var/lib/registry
 
   zookeeper:
     image: zookeeper:3.4
@@ -19,12 +19,22 @@ services:
     image: wurstmeister/kafka:0.11.0.0
     environment:
       KAFKA_ADVERTISED_HOST_NAME: 192.168.34.10
-      KAFKA_CREATE_TOPICS: test:1:1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_DELETE_TOPIC_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 2
     ports:
       - 9092:9092
       - 9093:9093
       - 9094:9094
+    links:
+      - zookeeper
+
+  zkui:
+    image: maauso/zkui
+    environment:
+      ZKLIST: zookeeper:2181
+    ports:
+      - 9090:9090
     links:
       - zookeeper
 
@@ -37,11 +47,3 @@ services:
     links:
       - zookeeper
       - kafka
-
-  # kafka-web-console:
-  #   image: hwestphal/kafka-web-console
-  #   ports:
-  #     - 9000:9000
-  #   links:
-  #     - zookeeper
-  #     - kafka

@@ -28,7 +28,7 @@ defmodule Proxy.Connection do
   @doc """
   Sends message to tcp socket
   """
-  @spec send_message(pid, String.t) :: :ok
+  @spec send_message(GenServer.server, String.t) :: :ok
   def send_message(pid, data) do
     GenServer.call(pid, {:send_message, data})
   end
