@@ -73,8 +73,14 @@ defmodule Proxy.Connection do
   end
 
   def handle_cast(:soft_stop, %{consumer: consumer}) do
+    Logger.debug "Wating for empty queue"
     wait_empty_queue(consumer)
     exit(:normal)
+  end
+
+  def terminate(reason, _state) do
+    Logger.debug "Connection terminated"
+    reason
   end
 
   @spec wait_empty_queue(pid) :: :ok

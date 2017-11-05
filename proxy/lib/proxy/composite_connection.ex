@@ -6,10 +6,12 @@ defmodule Proxy.CompositeConnection do
 
   require Logger
 
+  alias Proxy.TCPSocket
   alias Proxy.TopicsAllocator
   alias Proxy.Connection
 
   @type t :: GenServer.server
+  @type service :: {String.t, non_neg_integer}
   @type child_spec :: {String.t, module, atom, list}
 
   @cli_group "proxy_cli_consumer"
@@ -20,9 +22,9 @@ defmodule Proxy.CompositeConnection do
   @doc """
   Starts CompositeConnection
   """
-  @spec start_link(:gen_tcp.socket, :gen_tcp.socket) :: {:ok, pid} | {:error, any}
-  def start_link(cli_socket, app_socket, opts \\ []) do
-    GenServer.start_link(__MODULE__, {cli_socket, app_socket}, opts)
+  @spec start_link(:gen_tcp.socket, service) :: {:ok, pid} | {:error, any}
+  def start_link(cli_socket, service, opts \\ []) do
+    GenServer.start_link(__MODULE__, {cli_socket, service}, opts)
   end
 
   @doc """
@@ -41,17 +43,19 @@ defmodule Proxy.CompositeConnection do
     GenServer.call(server, :resume_app_conn)
   end
 
-  def init({cli_socket, app_socket}) do
+  def init({cli_socket, {host, port} = service}) do
     Process.flag(:trap_exit, true)
 
-    with {:ok, topic} <- TopicsAllocator.allocate(TopicsAllocator),
+    with {:ok, app_socket} <- TCPSocket.connect(host, port),
+         {:ok, topic} <- TopicsAllocator.allocate(TopicsAllocator),
          {:ok, cli_conn} <- start_connection(:cli, cli_socket, topic),
          {:ok, app_conn} <- start_connection(:app, app_socket, topic)
     do
+      TCPSocket.controlling_process(cli_socket, cli_conn)
+      TCPSocket.controlling_process(app_socket, app_conn)
       state = %{
-        cli_socket: cli_socket,
+        service: service,
         cli_conn: cli_conn,
-        app_socket: app_socket,
         app_conn: app_conn,
         topic: topic
       }
@@ -89,13 +93,15 @@ defmodule Proxy.CompositeConnection do
   end
 
   def handle_call(:resume_app_conn, _from,
-                  %{app_socket: app_socket, topic: topic} = state) do
+                  %{service: {host, port}, topic: topic} = state) do
     if app_conn_paused?(state) do
-      case start_connection(:app, app_socket, topic) do
-        {:ok, pid} ->
-          {:reply, :ok, %{state | app_conn: pid}}
-        err ->
-          {:reply, err, state}
+      with {:ok, app_socket} <- TCPSocket.connect(host, port),
+           {:ok, app_conn} <- start_connection(:app, app_socket, topic)
+      do
+        TCPSocket.controlling_process(app_socket, app_conn)
+        {:reply, :ok, %{state | app_conn: app_conn}}
+      else
+        err -> {:reply, err, state}
       end
     else
       {:reply, :ok, state}
@@ -104,7 +110,7 @@ defmodule Proxy.CompositeConnection do
 
   def terminate(reason, %{topic: topic}) do
     TopicsAllocator.free(TopicsAllocator, topic)
-    Logger.debug("Connection closed")
+    Logger.debug "CompositeConnection terminated"
     reason
   end
 

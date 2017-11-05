@@ -12,7 +12,6 @@ defmodule Proxy.ConnectionPool do
 
   @timeout 5_000
 
-  alias Proxy.TCPSocket
   alias Proxy.CompositeConnection
 
   @doc """
@@ -47,17 +46,7 @@ defmodule Proxy.ConnectionPool do
   """
   @spec create_connection(t, :gen_tcp.socket, service) ::
         {:ok, pid} | {:error, any}
-  def create_connection(sup, cli_socket, {host, port}) do
-    case TCPSocket.connect(host, port) do
-      {:ok, app_socket} ->
-        args = [cli_socket, app_socket]
-        case Supervisor.start_child(sup, args) do
-          {:ok, pid} -> {:ok, pid}
-          err ->
-            TCPSocket.close(app_socket)
-            err
-        end
-      err -> err
-    end
+  def create_connection(sup, cli_socket, service) do
+    Supervisor.start_child(sup, [cli_socket, service])
   end
 end

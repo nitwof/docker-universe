@@ -36,6 +36,7 @@ defmodule Proxy.Connection.Listener do
         KafkaEx.produce(topic, partition, msg)
         run(socket, topic, partition)
       {:error, _} ->
+        Logger.debug("TCP Connection closed")
         exit(:normal)
     end
   end

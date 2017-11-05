@@ -38,18 +38,13 @@ defmodule Proxy.Acceptor do
   defp loop_acceptor(socket, service) do
     {:ok, client} = TCPSocket.accept(socket)
 
-    Logger.debug fn ->
-      "Accepted connection"
-    end
+    Logger.debug "Accepted connection"
 
     case ConnectionPool.create_connection(ConnectionPool, client, service) do
-      {:ok, pid} ->
-        :ok = TCPSocket.controlling_process(client, pid)
-      _ ->
+      {:ok, _} -> :ok
+      {:error, _} ->
         TCPSocket.close(client)
-        Logger.debug fn ->
-          "Failed to create connection in ConnectionPool"
-        end
+        Logger.debug "Failed to create connection in ConnectionPool"
     end
 
     loop_acceptor(socket, service)
