@@ -74,8 +74,8 @@ defmodule Proxy.TCPSocket do
   Returns data or error.
   """
   @spec read(:gen_tcp.socket) :: {:ok, String.t} | {:error, :closed | :inet.posix}
-  def read(socket) do
-    :gen_tcp.recv(socket, 0)
+  def read(socket, timeout \\ :infinity) do
+    :gen_tcp.recv(socket, 0, timeout)
   end
 
   @doc """

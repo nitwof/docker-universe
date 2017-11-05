@@ -7,12 +7,15 @@ defmodule Proxy.Zookeeper do
 
   alias String.Chars
 
+  @type t :: GenServer.server
+  @type host :: {String.t, non_neg_integer}
+
   @timeout 10_000
 
   @doc """
   Starts zookeeper client
   """
-  @spec start_link(list({String.t, non_neg_integer})) ::
+  @spec start_link(list(host)) ::
         {:ok, pid} | {:error, any}
   def start_link(hosts, opts \\ []) do
     GenServer.start_link(__MODULE__, hosts, opts)
@@ -21,7 +24,7 @@ defmodule Proxy.Zookeeper do
   @doc """
   Creates path in zookeeper
   """
-  @spec create(GenServer.server, String.t) :: {:ok, String.t} | {:error, any}
+  @spec create(t, String.t) :: {:ok, String.t} | {:error, any}
   def create(pid, path) do
     GenServer.call(pid, {:create, path})
   end

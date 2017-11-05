@@ -7,10 +7,10 @@ defmodule Proxy.ConnectionPool do
 
   use Supervisor
 
-  @timeout 5_000
+  @type t :: Supervisor.supervisor
+  @type service :: {String.t, non_neg_integer}
 
-  @host "127.0.0.1"
-  @port 6379
+  @timeout 5_000
 
   alias Proxy.TCPSocket
   alias Proxy.CompositeConnection
@@ -34,7 +34,7 @@ defmodule Proxy.ConnectionPool do
   @doc """
   Stops connection pool
   """
-  @spec stop(Supervisor.supervisor) :: :ok
+  @spec stop(t) :: :ok
   def stop(sup) do
     sup
     |> Supervisor.which_children
@@ -45,10 +45,10 @@ defmodule Proxy.ConnectionPool do
   @doc """
   Creates new connection and appends it to children
   """
-  @spec create_connection(Supervisor.supervisor, :gen_tcp.socket) ::
+  @spec create_connection(t, :gen_tcp.socket, service) ::
         {:ok, pid} | {:error, any}
-  def create_connection(sup, cli_socket) do
-    case TCPSocket.connect(@host, @port) do
+  def create_connection(sup, cli_socket, {host, port}) do
+    case TCPSocket.connect(host, port) do
       {:ok, app_socket} ->
         args = [cli_socket, app_socket]
         case Supervisor.start_child(sup, args) do

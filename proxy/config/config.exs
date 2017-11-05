@@ -3,7 +3,12 @@
 use Mix.Config
 
 config :proxy,
-  zk_hosts: [{"0.0.0.0", 2181}]
+  zk_hosts: [{"0.0.0.0", 2181}],
+  routes: %{
+    8080 => {"localhost", 2000},
+    8081 => {"0.0.0.0", 3000},
+    8082 => {"localhost", 6379}
+  }
 
 config :logger,
   backends: [:console],
@@ -11,7 +16,7 @@ config :logger,
   compile_time_purge_level: :debug
 
 config :logger, :console,
-  metadata: [:module, :function]
+  metadata: [:pid, :module, :function]
 
 kafka_host = System.get_env("KAFKA_HOST") || "0.0.0.0"
 config :kafka_ex,

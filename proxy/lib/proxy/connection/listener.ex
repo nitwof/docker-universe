@@ -27,16 +27,16 @@ defmodule Proxy.Connection.Listener do
       {:ok, msg} ->
 
         Logger.debug fn ->
-          "Received message '#{inspect(msg)}' from tcp socket"
+          "Received message #{inspect(msg)} from tcp socket"
         end
         Logger.debug fn ->
-          "Sending message '#{inspect(msg)}' to Kafka #{topic}:#{partition}}"
+          "Sending message #{inspect(msg)} to Kafka #{topic}:#{partition}"
         end
 
         KafkaEx.produce(topic, partition, msg)
         run(socket, topic, partition)
       {:error, _} ->
-        exit(:shutdown)
+        exit(:normal)
     end
   end
 end

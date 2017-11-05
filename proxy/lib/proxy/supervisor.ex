@@ -8,7 +8,7 @@ defmodule Proxy.Supervisor do
   alias Proxy.Zookeeper
   alias Proxy.TopicsAllocator
   alias Proxy.ConnectionPool
-  alias Proxy.Acceptor
+  alias Proxy.AcceptorPool
 
   def start_link(opts) do
     Supervisor.start_link(__MODULE__, :ok, opts)
@@ -25,10 +25,14 @@ defmodule Proxy.Supervisor do
         restart: :permanent
       ),
       {ConnectionPool, name: ConnectionPool},
-      Supervisor.child_spec(Acceptor,
-        start: {Acceptor, :start_link, [8080, ConnectionPool]},
+      %{
+        id: AcceptorPool,
+        start: {
+          AcceptorPool, :start_link,
+          [routes(), [name: AcceptorPool, restart: :permanent]]
+        },
         restart: :permanent
-      )
+      }
     ]
 
     Supervisor.init(children, strategy: :one_for_one, name: Proxy.Supervisor)
@@ -36,5 +40,9 @@ defmodule Proxy.Supervisor do
 
   defp zk_hosts do
     Application.get_env(:proxy, :zk_hosts)
+  end
+
+  defp routes do
+    Application.get_env(:proxy, :routes)
   end
 end
