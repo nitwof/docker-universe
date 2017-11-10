@@ -14,8 +14,8 @@ defmodule Proxy.Acceptor do
   @doc """
   Starts task
   """
-  @spec start_link(non_neg_integer, service) :: {:ok, pid} | {:error, any}
-  def start_link(port, service) do
+  @spec start_link(String.t, non_neg_integer, service) :: {:ok, pid} | {:error, any}
+  def start_link(_service_name, port, service) do
     Task.start_link(__MODULE__, :run, [port, service])
   end
 

@@ -10,8 +10,6 @@ defmodule Proxy.ConnectionPool do
   @type t :: Supervisor.supervisor
   @type service :: {String.t, non_neg_integer}
 
-  @timeout 5_000
-
   alias Proxy.CompositeConnection
 
   @doc """
@@ -35,10 +33,18 @@ defmodule Proxy.ConnectionPool do
   """
   @spec stop(t) :: :ok
   def stop(sup) do
+    stop_all(sup)
+    Supervisor.stop(sup)
+  end
+
+  @doc """
+  Stops all connections
+  """
+  @spec stop_all(t) :: :ok
+  def stop_all(sup) do
     sup
     |> Supervisor.which_children
-    |> Enum.each(fn {_, pid, _, _} -> GenServer.stop(pid, :normal, @timeout) end)
-    Supervisor.stop(sup)
+    |> Enum.each(fn {_, pid, _, _} -> Supervisor.terminate_child(sup, pid) end)
   end
 
   @doc """
