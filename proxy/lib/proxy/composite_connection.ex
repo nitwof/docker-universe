@@ -22,9 +22,25 @@ defmodule Proxy.CompositeConnection do
   @doc """
   Starts CompositeConnection
   """
-  @spec start_link(:gen_tcp.socket, service) :: {:ok, pid} | {:error, any}
-  def start_link(cli_socket, service, opts \\ []) do
-    GenServer.start_link(__MODULE__, {cli_socket, service}, opts)
+  @spec start_link(:gen_tcp.socket, String.t, service) :: {:ok, pid} | {:error, any}
+  def start_link(cli_socket, service_name, service, opts \\ []) do
+    GenServer.start_link(__MODULE__, {cli_socket, service_name, service}, opts)
+  end
+
+  @doc """
+  Returns cli conn
+  """
+  @spec cli_conn(t) :: pid
+  def cli_conn(server) do
+    GenServer.call(server, :cli_conn)
+  end
+
+  @doc """
+  Returns service name
+  """
+  @spec service_name(t) :: String.t
+  def service_name(server) do
+    GenServer.call(server, :service_name)
   end
 
   @doc """
@@ -43,7 +59,7 @@ defmodule Proxy.CompositeConnection do
     GenServer.call(server, :resume_app_conn)
   end
 
-  def init({cli_socket, {host, port} = service}) do
+  def init({cli_socket, service_name, {host, port} = service}) do
     Process.flag(:trap_exit, true)
 
     with {:ok, app_socket} <- TCPSocket.connect(host, port),
@@ -51,9 +67,9 @@ defmodule Proxy.CompositeConnection do
          {:ok, cli_conn} <- start_connection(:cli, cli_socket, topic),
          {:ok, app_conn} <- start_connection(:app, app_socket, topic)
     do
-      TCPSocket.controlling_process(cli_socket, cli_conn)
-      TCPSocket.controlling_process(app_socket, app_conn)
+      :ok = TCPSocket.controlling_process(app_socket, app_conn)
       state = %{
+        service_name: service_name,
         service: service,
         cli_conn: cli_conn,
         app_conn: app_conn,
@@ -106,6 +122,14 @@ defmodule Proxy.CompositeConnection do
     else
       {:reply, :ok, state}
     end
+  end
+
+  def handle_call(:service_name, _from, %{service_name: service_name} = state) do
+    {:reply, service_name, state}
+  end
+
+  def handle_call(:cli_conn, _from, %{cli_conn: cli_conn} = state) do
+    {:reply, cli_conn, state}
   end
 
   def terminate(reason, %{topic: topic}) do

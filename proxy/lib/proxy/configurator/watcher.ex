@@ -12,7 +12,7 @@ defmodule Proxy.Configurator.Watcher do
   alias Proxy.ConnectionPool
 
   @type config :: %{String.t => ServiceConfig.t}
-  @sleep_timeout 1000
+  @sleep_timeout 5000
 
   @doc """
   Starts watcher
@@ -26,7 +26,7 @@ defmodule Proxy.Configurator.Watcher do
   Main task's function
   """
   @spec run(Zookeeper.t, String.t) :: any
-  def run(zk, base_path, prev_config \\ nil) do
+  def run(zk, base_path, prev_config \\ %{}) do
     config = fetch_config(zk, base_path)
     if config != prev_config do
       Logger.debug("Configuration has changed. Updating...")
@@ -42,7 +42,8 @@ defmodule Proxy.Configurator.Watcher do
   @spec fetch_config(Zookeeper.t, String.t) :: config
   def fetch_config(zk, base_path) do
     {:ok, services} = Zookeeper.get_children(zk, base_path)
-    Enum.map(services, fn service ->
+    services
+    |> Enum.map(fn service ->
       {service, fetch_service_config(zk, base_path, service)}
     end)
     |> Enum.into(%{})
@@ -69,48 +70,48 @@ defmodule Proxy.Configurator.Watcher do
   @doc """
   Updates proxy configuration
   """
-  @spec update_configuration(config, config | nil) :: :ok
-  def update_configuration(config, _prev_config \\ nil) do
+  @spec update_configuration(config, config | %{}) :: :ok
+  def update_configuration(config, prev_config \\ %{}) do
+    services = config |> Map.keys() |> MapSet.new
+    prev_services = prev_config |> Map.keys() |> MapSet.new
+
+    deleted_services = MapSet.difference(prev_services, services)
+    # new_services = MapSet.difference(services, prev_services)
+    changed_services = services
+    |> MapSet.intersection(prev_services)
+    |> Enum.filter(fn service ->
+      config |> Map.get(service) |> Map.delete(:maintenance) !=
+        prev_config |> Map.get(service) |> Map.delete(:maintenance)
+    end)
+
     AcceptorPool.stop_all(AcceptorPool)
-    ConnectionPool.stop_all(ConnectionPool)
-    Process.sleep(@sleep_timeout)
-    config
+
+    changed_services
+    |> Enum.concat(deleted_services)
+    |> Enum.each(fn service ->
+      pids = ConnectionPool.connections_by_service(ConnectionPool, service)
+      ConnectionPool.stop_all(ConnectionPool, pids)
+    end)
+
+    services
+    |> Enum.map(fn service -> {service, Map.get(config, service)} end)
     |> Enum.each(fn {service, service_config} ->
       AcceptorPool.start_acceptor(AcceptorPool, service, service_config)
     end)
-    # services_set = config |> Map.keys() |> MapSet.new
-    # prev_services_set = config |> Map.keys() |> MapSet.new
-    # services = MapSet.intersection(services_set, prev_services_set)
-    # deleted_services = MapSet.difference(prev_services_set, services_set)
-    # new_services = MapSet.difference(services_set, prev_services_set)
-    # changed_services = services
-    #                    |> Enum.filter(fn service ->
-    #                      Map.get(config, service) != Map.get(prev_config, service)
-    #                    end)
 
-    # deleted_services
-    # |> Enum.each(fn service ->
-    #   acceptor = AcceptorPool.find_by_service(AcceptorPool, service)
-    #   AcceptorPool.stop_acceptor(AcceptorPool, acceptor)
-    #   connections = ConnectionPool.select_by_service(ConnectionPool, service)
-    #   ConnectionPool.stop_all(ConnectionPool, connections)
-    # end)
-
-    # new_services
-    # |> Enum.map(fn service -> {service, Map.get(config, service)} end)
-    # |> Enum.each(fn {service, service_config} ->
-    #   AcceptorPool.start_acceptor(AcceptorPool, service, service_config)
-    # end)
-
-    # changed_services
-    # |> Enum.map(fn service -> {service, Map.get(config, service)} end)
-    # |> Enum.each(fn {service, service_config} ->
-    #   acceptor = AcceptorPool.find_by_service(AcceptorPool, service)
-    #   AcceptorPool.stop_acceptor(AcceptorPool, acceptor)
-    #   connections = ConnectionPool.select_by_service(ConnectionPool, service)
-    #   ConnectionPool.stop_all(ConnectionPool, connections)
-    #   AcceptorPool.start_acceptor(AcceptorPool, service, service_config)
-    # end)
+    services
+    |> Enum.map(fn service -> {service, Map.get(config, service)} end)
+    |> Enum.each(fn
+      {service, %{maintenance: true}} ->
+        ConnectionPool
+        |> ConnectionPool.connections_by_service(service)
+        |> ConnectionPool.pause_all()
+      {service, %{maintenance: false}} ->
+        ConnectionPool
+        |> ConnectionPool.connections_by_service(service)
+        |> ConnectionPool.resume_all()
+      end
+    )
 
     :ok
   end

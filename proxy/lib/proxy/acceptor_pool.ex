@@ -52,7 +52,7 @@ defmodule Proxy.AcceptorPool do
   @spec start_acceptor(t, String.t, ServiceConfig.t) :: {:ok, pid}
   def start_acceptor(sup, service, config) do
     Supervisor.start_child(
-      sup, [service, config.proxy_port, {config.host, config.port}]
+      sup, [config.proxy_port, service, {config.host, config.port}]
     )
   end
 
