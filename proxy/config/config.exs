@@ -3,12 +3,7 @@
 use Mix.Config
 
 config :proxy,
-  zk_hosts: [{"0.0.0.0", 2181}],
-  routes: %{
-    8080 => {"localhost", 2000},
-    8081 => {"0.0.0.0", 3000},
-    8082 => {"localhost", 6379}
-  }
+  zk_hosts: [{"0.0.0.0", 2181}]
 
 config :logger,
   backends: [:console],
