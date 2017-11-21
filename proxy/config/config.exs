@@ -2,8 +2,16 @@
 # and its dependencies with the aid of the Mix.Config module.
 use Mix.Config
 
+zk_hosts = System.get_env("ZK_HOSTS") || "0.0.0.0:2181"
+kafka_host = System.get_env("KAFKA_HOST") || "0.0.0.0"
+
 config :proxy,
-  zk_hosts: [{"0.0.0.0", 2181}]
+  zk_hosts: zk_hosts
+            |> String.split(";")
+            |> Enum.map(fn zk_host -> String.split(zk_host, ":") end)
+            |> Enum.map(fn [host, port] ->
+              {host, port |> Integer.parse() |> elem(0)}
+            end)
 
 config :logger,
   backends: [:console],
@@ -13,7 +21,6 @@ config :logger,
 config :logger, :console,
   metadata: [:pid, :module, :function]
 
-kafka_host = System.get_env("KAFKA_HOST") || "0.0.0.0"
 config :kafka_ex,
   brokers: [
     {kafka_host, 9092},

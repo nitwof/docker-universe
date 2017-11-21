@@ -1,0 +1,10 @@
+_build
+_cover
+deps
+doc
+.fetch
+erl_crash.dump
+*.ez
+Dockerfile
+.dockerignore
+.vim

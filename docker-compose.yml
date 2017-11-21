@@ -18,7 +18,7 @@ services:
   kafka:
     image: wurstmeister/kafka:0.11.0.0
     environment:
-      KAFKA_ADVERTISED_HOST_NAME: 192.168.34.10
+      KAFKA_ADVERTISED_HOST_NAME: kafka
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_DELETE_TOPIC_ENABLE: "true"
       KAFKA_NUM_PARTITIONS: 2
@@ -47,3 +47,30 @@ services:
     links:
       - zookeeper
       - kafka
+
+  httpbin:
+    image: citizenstig/httpbin
+    ports:
+      - 3030:8000
+
+  proxy:
+    build: ./proxy
+    environment:
+      MIX_ENV: prod
+      ZK_HOSTS: zookeeper:2181
+      KAFKA_HOST: kafka
+    ports:
+      - "8000-8999:8000-8999"
+    links:
+      - kafka
+      - zookeeper
+      - httpbin
+
+  httpd:
+    image: httpd:2.2-alpine
+    ports:
+      - 7777:80
+    volumes:
+      - ./httpd/httpd.conf:/usr/local/apache2/conf/httpd.conf
+    links:
+      - httpbin
