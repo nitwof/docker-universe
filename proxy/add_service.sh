@@ -5,6 +5,8 @@ host=$2
 port=$3
 proxy_port=$4
 cmd="
+create /proxy 0\n
+create /proxy/services 0\n
 create /proxy/services/$service $service\n
 create /proxy/services/$service/host $host\n
 create /proxy/services/$service/port $port\n
