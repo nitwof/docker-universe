@@ -7,13 +7,13 @@ defmodule Proxy.CompositeConnection do
   require Logger
 
   alias Proxy.TCPSocket
-  alias Proxy.TopicsAllocator
   alias Proxy.Connection
 
   @type t :: GenServer.server
   @type service :: {String.t, non_neg_integer}
   @type child_spec :: {String.t, module, atom, list}
 
+  @topic_len 32
   @cli_group "proxy_cli_consumer"
   @cli_partition 1
   @app_group "proxy_app_consumer"
@@ -28,14 +28,6 @@ defmodule Proxy.CompositeConnection do
   end
 
   @doc """
-  Returns cli conn
-  """
-  @spec cli_conn(t) :: pid
-  def cli_conn(server) do
-    GenServer.call(server, :cli_conn)
-  end
-
-  @doc """
   Returns service name
   """
   @spec service_name(t) :: String.t
@@ -43,31 +35,15 @@ defmodule Proxy.CompositeConnection do
     GenServer.call(server, :service_name)
   end
 
-  @doc """
-  Pauses app connection
-  """
-  @spec pause_app_conn(t) :: :ok
-  def pause_app_conn(server) do
-    GenServer.call(server, :pause_app_conn)
-  end
-
-  @doc """
-  Resumes app connection
-  """
-  @spec resume_app_conn(t) :: :ok | {:error, any}
-  def resume_app_conn(server) do
-    GenServer.call(server, :resume_app_conn)
-  end
-
   def init({cli_socket, service_name, {host, port} = service}) do
     Process.flag(:trap_exit, true)
 
+    topic = generate_topic()
+    KafkaEx.produce(topic, 0, "")
     with {:ok, app_socket} <- TCPSocket.connect(host, port),
-         {:ok, topic} <- TopicsAllocator.allocate(TopicsAllocator),
          {:ok, cli_conn} <- start_connection(:cli, cli_socket, topic),
          {:ok, app_conn} <- start_connection(:app, app_socket, topic)
     do
-      :ok = TCPSocket.controlling_process(app_socket, app_conn)
       state = %{
         service_name: service_name,
         service: service,
@@ -77,50 +53,25 @@ defmodule Proxy.CompositeConnection do
       }
       {:ok, state}
     else
-      err ->
-        {:error, err}
+      err -> {:error, err}
     end
   end
 
   def handle_info({:EXIT, from, _reason},
                   %{cli_conn: cli_conn, app_conn: app_conn} = state) do
-    require Logger
+    %Connection{listener: cli_listener, consumer: cli_consumer} = cli_conn
+    %Connection{listener: app_listener, consumer: app_consumer} = app_conn
     case from do
-      ^cli_conn ->
-        if !app_conn_paused?(state) && Process.alive?(app_conn) do
-          Connection.stop(app_conn)
-        end
+      x when x in [cli_listener, cli_consumer] ->
+        Logger.debug fn -> "Cli connection terminated" end
+        Connection.stop(app_conn)
         exit(:normal)
-      ^app_conn ->
-        if !app_conn_paused?(state) && Process.alive?(cli_conn) do
-          Connection.soft_stop(cli_conn)
-        end
-        {:noreply, state}
+      x when x in [app_listener, app_consumer] ->
+        Logger.debug fn -> "App connection terminated" end
+        Connection.soft_stop(cli_conn)
+        exit(:normal)
       _ ->
         {:noreply, state}
-    end
-  end
-
-  def handle_call(:pause_app_conn, _from, %{app_conn: app_conn} = state) do
-    unless app_conn_paused?(state) do
-      Connection.stop(app_conn)
-    end
-    {:reply, :ok, %{state | app_conn: nil}}
-  end
-
-  def handle_call(:resume_app_conn, _from,
-                  %{service: {host, port}, topic: topic} = state) do
-    if app_conn_paused?(state) do
-      with {:ok, app_socket} <- TCPSocket.connect(host, port),
-           {:ok, app_conn} <- start_connection(:app, app_socket, topic)
-      do
-        TCPSocket.controlling_process(app_socket, app_conn)
-        {:reply, :ok, %{state | app_conn: app_conn}}
-      else
-        err -> {:reply, err, state}
-      end
-    else
-      {:reply, :ok, state}
     end
   end
 
@@ -128,31 +79,28 @@ defmodule Proxy.CompositeConnection do
     {:reply, service_name, state}
   end
 
-  def handle_call(:cli_conn, _from, %{cli_conn: cli_conn} = state) do
-    {:reply, cli_conn, state}
-  end
-
-  def terminate(reason, %{topic: topic}) do
-    TopicsAllocator.free(TopicsAllocator, topic)
-    Logger.debug "CompositeConnection terminated"
-    reason
-  end
-
   @spec start_connection(:cli | :app, :gen_tcp.socket, String.t) ::
         {:ok, pid} | {:error, any}
   defp start_connection(:cli, socket, topic) do
-    Connection.start_link(
+    Connection.start(
       socket, @cli_group, topic, @cli_partition, @app_partition
     )
   end
   defp start_connection(:app, socket, topic) do
-    Connection.start_link(
+    Connection.start(
       socket, @app_group, topic, @app_partition, @cli_partition
     )
   end
 
-  @spec app_conn_paused?(map) :: boolean
-  defp app_conn_paused?(%{app_conn: app_conn}) do
-    is_nil(app_conn)
+  @spec generate_topic() :: String.t
+  defp generate_topic do
+    generate_hex(@topic_len)
+  end
+
+  @spec generate_hex(integer) :: String.t
+  defp generate_hex(n) do
+    n
+    |> :crypto.strong_rand_bytes()
+    |> Base.encode16(case: :lower)
   end
 end

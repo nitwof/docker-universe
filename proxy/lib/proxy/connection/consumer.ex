@@ -11,6 +11,8 @@ defmodule Proxy.Connection.Consumer do
 
   require Logger
 
+  @timeout 5000
+
   # Client
 
   @doc """
@@ -18,9 +20,8 @@ defmodule Proxy.Connection.Consumer do
   """
   @spec start_link(:gen_tcp.socket, String.t, String.t, non_neg_integer) ::
         {:ok, pid} | {:error, any}
-  def start_link(socket, group_name, topic, partition, opts \\ []) do
-    with {:ok, pid} <- GenConsumer.start_link(__MODULE__, group_name,
-                                              topic, partition, opts)
+  def start_link(socket, group, topic, partition, opts \\ []) do
+    with {:ok, pid} <- GenConsumer.start_link(__MODULE__, group, topic, partition, opts)
     do
       set_socket(pid, socket)
       {:ok, pid}
@@ -44,6 +45,14 @@ defmodule Proxy.Connection.Consumer do
     %{current_offset: current_offset,
       committed_offset: committed_offset} = :sys.get_state(pid)
     current_offset == committed_offset
+  end
+
+  @doc """
+  Stops consumer
+  """
+  @spec stop(pid) :: :ok
+  def stop(pid, timeout \\ @timeout) do
+    GenServer.stop(pid, timeout)
   end
 
   # Server

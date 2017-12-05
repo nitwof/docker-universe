@@ -1,95 +1,89 @@
 defmodule Proxy.Connection do
   @moduledoc """
-  Storage for tcp socket.
-  Provides functions manage tcp socket.
-  Starts tcp socket listener and kafka consumer.
-  Shutdowns on listener or consumer exit.
+  Provides functions for managing connection
   """
-  use GenServer
 
-  require Logger
-
+  alias Proxy.Connection
   alias Proxy.Connection.Listener
   alias Proxy.Connection.Consumer
+  alias Proxy.TCPSocket
 
-  @type t :: GenServer.server
+  defstruct [
+    :listener,
+    :consumer,
+    :socket,
+    :group,
+    :topic,
+    :input_partition,
+    :output_partition
+  ]
 
-  @sleep_timeout 100
+  @wait_timeout 10
 
-  # Client
+  @type t :: %Connection{}
 
   @doc """
-  Starts connection
+  Starts new connection
   """
-  @spec start_link(:gen_tcp.socket, String.t, String.t,
-                   non_neg_integer, non_neg_integer) :: {:ok, pid} | {:error, any}
-  def start_link(socket, group_name, topic, partition_from, partition_to) do
-    GenServer.start_link(__MODULE__,
-      {socket, group_name, topic, partition_from, partition_to}
-    )
+  @spec start(:gen_tcp.socket, String.t, String.t, non_neg_integer, non_neg_integer) ::
+        {:ok, t} | {:error, any}
+  def start(socket, group, topic, input_partition, output_partition) do
+    with {:ok, listener} <- Listener.start_link(socket, topic, input_partition),
+         {:ok, consumer} <- Consumer.start_link(socket, group, topic, output_partition)
+    do
+      {:ok,
+        %Connection{
+          listener: listener,
+          consumer: consumer,
+          socket: socket,
+          group: group,
+          topic: topic,
+          input_partition: input_partition,
+          output_partition: output_partition
+        }
+      }
+    end
+  end
+
+  @doc """
+  Starts new connection from existsing Connection struct
+  """
+  @spec start(t) :: {:ok, t} | {:error, any}
+  def start(%Connection{socket: socket, group: group, topic: topic,
+                        input_partition: input_partition,
+                        output_partition: output_partition}) do
+   start(socket, group, topic, input_partition, output_partition)
   end
 
   @doc """
   Stops connection
   """
   @spec stop(t) :: :ok
-  def stop(pid) do
-    GenServer.stop(pid)
+  def stop(%Connection{listener: listener, consumer: consumer, socket: socket}) do
+    Listener.stop(listener)
+    Consumer.stop(consumer)
+    TCPSocket.close(socket)
+    :ok
   end
 
   @doc """
-  Stops connection.
-  But waiting when handles all messages from queue before this
+  Stops connection but waits for empty queue
   """
   @spec soft_stop(t) :: :ok
-  def soft_stop(pid) do
-    GenServer.cast(pid, :soft_stop)
+  def soft_stop(%Connection{listener: listener, consumer: consumer,
+                            socket: socket}) do
+    Listener.stop(listener)
+    wait_for_empty_queue(consumer)
+    Consumer.stop(consumer)
+    TCPSocket.close(socket)
   end
 
-  # Server
-
-  def init({socket, group_name, topic, partition_from, partition_to}) do
-    Process.flag(:trap_exit, true)
-
-    with {:ok, listener} <- Listener.start_link(socket, topic, partition_to),
-         {:ok, consumer} <- Consumer.start_link(socket, group_name, topic, partition_from)
-    do
-      state = %{
-        kafka_group_name: group_name,
-        kafka_topic: topic,
-        kafka_partition_from: partition_from,
-        kafka_partition_to: partition_to,
-        listener: listener,
-        consumer: consumer
-      }
-      {:ok, state}
-    else
-      err -> {:error, err}
+  @spec wait_for_empty_queue(Consumer.t) :: :ok
+  defp wait_for_empty_queue(consumer) do
+    unless Consumer.queue_empty?(consumer) do
+      Process.sleep(@wait_timeout)
+      wait_for_empty_queue(consumer)
     end
-  end
-
-  def handle_info({:EXIT, _from, _reason}, _state) do
-    exit(:normal)
-  end
-
-  def handle_cast(:soft_stop, %{consumer: consumer}) do
-    Logger.debug "Wating for empty queue"
-    wait_empty_queue(consumer)
-    exit(:normal)
-  end
-
-  def terminate(reason, _state) do
-    Logger.debug "Connection terminated"
-    reason
-  end
-
-  @spec wait_empty_queue(pid) :: :ok
-  defp wait_empty_queue(consumer) do
-    if Consumer.queue_empty?(consumer) do
-      :ok
-    else
-      Process.sleep(@sleep_timeout)
-      wait_empty_queue(consumer)
-    end
+    :ok
   end
 end

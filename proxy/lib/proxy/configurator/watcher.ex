@@ -99,19 +99,19 @@ defmodule Proxy.Configurator.Watcher do
       AcceptorPool.start_acceptor(AcceptorPool, service, service_config)
     end)
 
-    services
-    |> Enum.map(fn service -> {service, Map.get(config, service)} end)
-    |> Enum.each(fn
-      {service, %{maintenance: true}} ->
-        ConnectionPool
-        |> ConnectionPool.connections_by_service(service)
-        |> ConnectionPool.pause_all()
-      {service, %{maintenance: false}} ->
-        ConnectionPool
-        |> ConnectionPool.connections_by_service(service)
-        |> ConnectionPool.resume_all()
-      end
-    )
+    # services
+    # |> Enum.map(fn service -> {service, Map.get(config, service)} end)
+    # |> Enum.each(fn
+    #   {service, %{maintenance: true}} ->
+    #     ConnectionPool
+    #     |> ConnectionPool.connections_by_service(service)
+    #     |> ConnectionPool.pause_all()
+    #   {service, %{maintenance: false}} ->
+    #     ConnectionPool
+    #     |> ConnectionPool.connections_by_service(service)
+    #     |> ConnectionPool.resume_all()
+    #   end
+    # )
 
     :ok
   end

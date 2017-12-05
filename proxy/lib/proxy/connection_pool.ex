@@ -70,24 +70,6 @@ defmodule Proxy.ConnectionPool do
   end
 
   @doc """
-  Pauses all connections
-  """
-  @spec pause_all(list(pid)) :: :ok
-  def pause_all(pids) do
-    pids
-    |> Enum.each(fn pid -> CompositeConnection.pause_app_conn(pid) end)
-  end
-
-  @doc """
-  Resumes all connections
-  """
-  @spec resume_all(list(pid)) :: :ok
-  def resume_all(pids) do
-    pids
-    |> Enum.each(fn pid -> CompositeConnection.resume_app_conn(pid) end)
-  end
-
-  @doc """
   Creates new connection and appends it to children
   """
   @spec create_connection(t, :gen_tcp.socket, String.t, service) ::

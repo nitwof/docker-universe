@@ -12,7 +12,15 @@ defmodule Proxy.TopicsAllocator do
 
   @type t :: GenServer.server
 
-  @topic_id_len 16
+  @topic_id_len 32
+
+  @doc """
+  Generates topic id
+  """
+  @spec generate_topic_id() :: String.t
+  def generate_topic_id do
+    generate_hex(@topic_id_len)
+  end
 
   @doc """
   Starts TopicsAllocator
@@ -57,7 +65,7 @@ defmodule Proxy.TopicsAllocator do
       {:reply, {:error, :not_found}, state}
     end
   end
-
+ 
   @spec allocate_new_topic(list(String.t)) :: String.t
   defp allocate_new_topic(topics) do
     topic = generate_topic_id()
@@ -66,11 +74,6 @@ defmodule Proxy.TopicsAllocator do
     else
       topic
     end
-  end
-
-  @spec generate_topic_id() :: String.t
-  defp generate_topic_id do
-    generate_hex(@topic_id_len)
   end
 
   @spec generate_hex(integer) :: String.t

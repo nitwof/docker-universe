@@ -10,6 +10,8 @@ defmodule Proxy.Connection.Listener do
 
   alias Proxy.TCPSocket
 
+  @type t :: Task.t
+
   @doc """
   Starts listener
   """
@@ -39,5 +41,13 @@ defmodule Proxy.Connection.Listener do
         Logger.debug("TCP Connection closed")
         exit(:normal)
     end
+  end
+
+  @doc """
+  Stops listener
+  """
+  @spec stop(t) :: true
+  def stop(pid) do
+    Process.exit(pid, :normal)
   end
 end

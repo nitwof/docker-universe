@@ -18,7 +18,7 @@ services:
   kafka:
     image: wurstmeister/kafka:0.11.0.0
     environment:
-      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_ADVERTISED_HOST_NAME: 172.17.0.1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_DELETE_TOPIC_ENABLE: "true"
       KAFKA_NUM_PARTITIONS: 2
@@ -60,7 +60,7 @@ services:
       ZK_HOSTS: zookeeper:2181
       KAFKA_HOST: kafka
     ports:
-      - "8000-8999:8000-8999"
+      - "8000-8010"
     links:
       - kafka
       - zookeeper

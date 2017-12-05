@@ -8,7 +8,6 @@ defmodule Proxy.Acceptor do
 
   alias Proxy.TCPSocket
   alias Proxy.ConnectionPool
-  alias Proxy.CompositeConnection
 
   @type service :: {String.t, non_neg_integer}
 
@@ -46,12 +45,12 @@ defmodule Proxy.Acceptor do
     case ConnectionPool.create_connection(ConnectionPool, client,
                                           service_name, service) do
       {:ok, pid} ->
-        cli_conn = CompositeConnection.cli_conn(pid)
-        :ok = TCPSocket.controlling_process(client, cli_conn)
-      {:error, _} ->
+        :ok = TCPSocket.controlling_process(client, pid)
+      {:error, error} ->
         TCPSocket.close(client)
         Logger.debug fn ->
-          "Failed to create connection in ConnectionPool for service #{service_name}"
+          "Failed to create connection in ConnectionPool for service " <>
+          "#{service_name}: #{inspect(error)}"
         end
     end
 
