@@ -42,18 +42,33 @@ defmodule Proxy.Acceptor do
       "Accepted connection for service #{service_name}"
     end
 
-    case ConnectionPool.create_connection(ConnectionPool, client,
-                                          service_name, service) do
+    task = Task.async(fn -> create_connection(client, service_name, service) end)
+    TCPSocket.controlling_process(client, task.pid)
+
+    Logger.debug "DEBUG: Accepted"
+
+    loop_acceptor(socket, service_name, service)
+  end
+
+  @spec create_connection(:gen_tcp.socket, String.t, service) ::
+        {:ok, pid} | {:error, any}
+  defp create_connection(socket, service_name, service) do
+    result = ConnectionPool.create_connection(ConnectionPool, socket,
+                                              service_name, service)
+    case result do
       {:ok, pid} ->
-        :ok = TCPSocket.controlling_process(client, pid)
+        :ok = TCPSocket.controlling_process(socket, pid)
+        Logger.debug fn ->
+          "Connection created in ConnectionPool for service " <>
+          "#{service_name}"
+        end
       {:error, error} ->
-        TCPSocket.close(client)
+        TCPSocket.close(socket)
         Logger.debug fn ->
           "Failed to create connection in ConnectionPool for service " <>
           "#{service_name}: #{inspect(error)}"
         end
     end
-
-    loop_acceptor(socket, service_name, service)
+    result
   end
 end

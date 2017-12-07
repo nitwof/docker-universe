@@ -18,7 +18,7 @@ defmodule Proxy.Connection do
     :output_partition
   ]
 
-  @wait_timeout 10
+  # @wait_timeout 10
 
   @type t :: %Connection{}
 
@@ -81,7 +81,7 @@ defmodule Proxy.Connection do
   @spec wait_for_empty_queue(Consumer.t) :: :ok
   defp wait_for_empty_queue(consumer) do
     unless Consumer.queue_empty?(consumer) do
-      Process.sleep(@wait_timeout)
+      # Process.sleep(@wait_timeout)
       wait_for_empty_queue(consumer)
     end
     :ok
